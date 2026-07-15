@@ -497,15 +497,26 @@ def main():
         errors.append(f"Crypto feed failed: {e} — using last known prices.")
 
     stock_rows = []
-    api_key = os.environ.get("FMP_API_KEY")
-    if not api_key:
-        errors.append("FMP_API_KEY not set — skipping stock feed, using last known prices.")
-    else:
+    stock_file = os.path.join(os.path.dirname(state_path) or ".", "stock_raw.json")
+    if os.path.exists(stock_file):
+        # Preferred path: a connector (e.g. the FMP connector in the routine) already
+        # fetched quotes this run and dropped the raw response here — no API key needed.
         try:
-            stock_raw = fetch_stock_raw(api_key)
+            with open(stock_file) as f:
+                stock_raw = json.load(f)
             stock_rows = extract_stock_rows(stock_raw)
         except Exception as e:
-            errors.append(f"Stock feed failed: {e} — using last known prices.")
+            errors.append(f"Stock feed (stock_raw.json) failed to parse: {e} — using last known prices.")
+    else:
+        api_key = os.environ.get("FMP_API_KEY")
+        if not api_key:
+            errors.append("No stock_raw.json and no FMP_API_KEY set — skipping stock feed, using last known prices.")
+        else:
+            try:
+                stock_raw = fetch_stock_raw(api_key)
+                stock_rows = extract_stock_rows(stock_raw)
+            except Exception as e:
+                errors.append(f"Stock feed failed: {e} — using last known prices.")
 
     scored_crypto = score_group(crypto_rows, state["params"]["momentumWeight"])
     scored_stocks = score_group(stock_rows, state["params"]["momentumWeight"])
