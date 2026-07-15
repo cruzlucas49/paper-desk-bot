@@ -1,0 +1,358 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Paper Desk / Simulator</title>
+<style>
+  :root { color-scheme: light; }
+  @import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600;700&display=swap');
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; }
+  body {
+    font-family: 'IBM Plex Mono', ui-monospace, 'SF Mono', Menlo, Consolas, monospace;
+    background: #FAFAF7;
+    color: #1F1E1B;
+    min-height: 100vh;
+  }
+  .dim { color: #78766F; }
+  .topbar {
+    border-bottom: 1px solid #E5E3DE;
+    padding: 14px 20px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 10px;
+    background: #FFFFFF;
+  }
+  .brand { font-weight: 700; font-size: 15px; letter-spacing: 0.08em; color: #B5651D; }
+  .brand span { color: #78766F; font-weight: 500; }
+  .statusRow { display: flex; align-items: center; gap: 16px; font-size: 12px; color: #56534C; flex-wrap: wrap; }
+  .liveDot {
+    width: 7px; height: 7px; border-radius: 50%;
+    background: #1F9254;
+    display: inline-block;
+    margin-right: 6px;
+    animation: blink 1.6s ease-in-out infinite;
+  }
+  .liveDot.stale { background: #C13B2D; }
+  #statusText.stale { color: #C13B2D; }
+  @keyframes blink { 0%, 100% { opacity: 1; } 50% { opacity: 0.3; } }
+  .errBanner {
+    background: #FBEDE9;
+    border-bottom: 1px solid #EAC4B8;
+    color: #A4472F;
+    font-size: 12px;
+    padding: 8px 20px;
+  }
+  .hero { padding: 22px 20px 18px; background: #FFFFFF; border-bottom: 1px solid #E5E3DE; }
+  .heroLabel { font-size: 10.5px; letter-spacing: 0.08em; color: #78766F; font-weight: 600; margin-bottom: 6px; }
+  .heroRow { display: flex; align-items: baseline; gap: 12px; flex-wrap: wrap; }
+  .heroValue { font-size: 40px; font-weight: 700; line-height: 1; letter-spacing: -0.01em; }
+  .heroDelta { display: inline-flex; align-items: center; gap: 5px; font-size: 15px; font-weight: 700; padding: 3px 9px 3px 7px; border-radius: 20px; }
+  .heroDelta.pos { background: #E4F4EA; color: #1F9254; }
+  .heroDelta.neg { background: #FBEDE9; color: #C13B2D; }
+  .pillRow { display: flex; gap: 10px; margin-top: 16px; flex-wrap: wrap; }
+  .pill { background: #FAFAF7; border: 1px solid #E9E7E1; border-radius: 6px; padding: 8px 14px; min-width: 120px; }
+  .pillLabel { font-size: 9.5px; letter-spacing: 0.07em; color: #78766F; margin-bottom: 3px; }
+  .pillValue { font-size: 15px; font-weight: 700; }
+  .pos { color: #1F9254; }
+  .neg { color: #C13B2D; }
+  .section { padding: 16px 20px; border-bottom: 1px solid #E5E3DE; }
+  .sectionTitle { font-size: 10.5px; letter-spacing: 0.08em; font-weight: 700; color: #78766F; margin-bottom: 10px; display: flex; justify-content: space-between; align-items: center; }
+  .chartWrap { background: #FFFFFF; border: 1px solid #E5E3DE; border-radius: 4px; padding: 10px 14px; }
+  .emptyState { padding: 24px 4px; text-align: center; color: #9A978E; font-size: 12px; }
+  .assetIcon { width: 26px; height: 26px; border-radius: 50%; flex-shrink: 0; display: flex; align-items: center; justify-content: center; }
+  .assetIcon.crypto { background: #EDE8FB; color: #6A4DC4; }
+  .assetIcon.stock { background: #E6F1FB; color: #276FB0; }
+  .badge { font-size: 9px; font-weight: 700; letter-spacing: 0.04em; padding: 2px 6px; border-radius: 3px; text-transform: uppercase; }
+  .badge.crypto { background: #EDE8FB; color: #6A4DC4; }
+  .badge.stock { background: #E6F1FB; color: #276FB0; }
+  .posGrid { display: flex; flex-direction: column; gap: 8px; }
+  .posCard { display: flex; align-items: center; gap: 12px; background: #FFFFFF; border: 1px solid #E5E3DE; border-radius: 6px; padding: 10px 12px; }
+  .posMain { flex: 1; min-width: 0; }
+  .posSymbolRow { display: flex; align-items: baseline; gap: 7px; }
+  .posSymbol { font-weight: 700; font-size: 13.5px; }
+  .posSub { font-size: 11px; color: #56534C; margin-top: 2px; }
+  .posPnl { text-align: right; flex-shrink: 0; }
+  .pnlLine { display: flex; align-items: center; justify-content: flex-end; gap: 4px; font-weight: 700; font-size: 13px; }
+  .pnlSub { font-size: 10px; color: #9A978E; margin-top: 1px; }
+  .staleTag { font-size: 9.5px; color: #C13B2D; font-weight: 600; }
+  .logRow { display: flex; align-items: center; gap: 10px; padding: 8px 0; border-bottom: 1px solid #F0EEE9; font-size: 11.5px; }
+  .logRow:last-child { border-bottom: none; }
+  .logIcon { width: 22px; height: 22px; border-radius: 50%; flex-shrink: 0; display: flex; align-items: center; justify-content: center; }
+  .logIcon.buy { background: #E4F4EA; color: #1F9254; }
+  .logIcon.sell { background: #FBEDE9; color: #C13B2D; }
+  .logMain { flex: 1; min-width: 0; display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap; }
+  .logSym { font-weight: 700; }
+  .logDetail { color: #78766F; font-size: 10.5px; }
+  .logTime { color: #9A978E; font-size: 10px; flex-shrink: 0; }
+  .cycleRow { border-bottom: 1px solid #F0EEE9; padding: 10px 0; font-size: 11.5px; }
+  .cycleRow:last-child { border-bottom: none; }
+  .cycleHead { display: flex; justify-content: space-between; gap: 10px; color: #56534C; margin-bottom: 4px; }
+  .cycleTime { font-size: 10px; color: #9A978E; }
+  .cycleNote { color: #78766F; font-size: 11px; }
+  .cycleEvent { color: #1F1E1B; font-size: 11.5px; padding: 2px 0 2px 10px; border-left: 2px solid #E9E7E1; margin-top: 3px; }
+  .cycleErr { color: #C13B2D; font-size: 10.5px; margin-top: 4px; }
+  .footer { padding: 14px 20px 26px; font-size: 11px; color: #9A978E; line-height: 1.6; }
+</style>
+</head>
+<body>
+<div class="topbar">
+  <div class="brand">PAPER DESK <span>/ CLOUD SIMULATOR</span></div>
+  <div class="statusRow" id="statusRow">
+    <span><span class="liveDot" id="liveDot"></span><span id="statusText">LIVE</span></span>
+    <span id="countdownText">updated —</span>
+    <span id="scanCount">0 assets tracked</span>
+  </div>
+</div>
+
+<div id="errBanner"></div>
+
+<div class="hero">
+  <div class="heroLabel">TOTAL PORTFOLIO VALUE</div>
+  <div class="heroRow">
+    <span class="heroValue" id="heroValue">—</span>
+    <span class="heroDelta" id="heroDelta"></span>
+  </div>
+  <div class="pillRow">
+    <div class="pill"><div class="pillLabel">CASH AVAILABLE</div><div class="pillValue" id="pillCash">—</div></div>
+    <div class="pill"><div class="pillLabel">OPEN POSITIONS</div><div class="pillValue" id="pillPositions">—</div></div>
+    <div class="pill"><div class="pillLabel">WIN RATE</div><div class="pillValue" id="pillWinRate">—</div></div>
+    <div class="pill"><div class="pillLabel">REALIZED P&amp;L</div><div class="pillValue" id="pillRealized">—</div></div>
+  </div>
+</div>
+
+<div class="section">
+  <div class="sectionTitle"><span>VALUE OVER TIME</span></div>
+  <div class="chartWrap">
+    <svg id="equitySvg" viewBox="0 0 600 100" preserveAspectRatio="none" style="width:100%;height:100px;display:block;"></svg>
+  </div>
+</div>
+
+<div class="section">
+  <div class="sectionTitle"><span>YOUR HOLDINGS</span></div>
+  <div class="posGrid" id="posGrid"></div>
+  <div class="emptyState" id="positionsEmpty" style="display:none">No open positions yet.</div>
+</div>
+
+<div class="section">
+  <div class="sectionTitle"><span>CYCLE ACTIVITY</span><span class="dim" id="cycleLogCount"></span></div>
+  <div id="cycleLogEl"></div>
+  <div class="emptyState" id="cycleLogEmpty" style="display:none">No cycles have run yet.</div>
+</div>
+
+<div class="section" style="border-bottom:none;">
+  <div class="sectionTitle"><span>RECENT TRADES</span><span class="dim" id="tradeLogCount"></span></div>
+  <div id="tradeLog"></div>
+  <div class="emptyState" id="tradeLogEmpty" style="display:none">No trades yet.</div>
+</div>
+
+<div class="footer">
+  SIMULATION ONLY — no real money, no real orders. Starting balance: $1,000 fake cash. Traded hourly by a
+  Claude Code Routine running on Anthropic's cloud, independent of any device being on. This page is a static
+  read of state.json in this repo and is not itself running the strategy.
+</div>
+
+<script>
+(function () {
+  "use strict";
+  const STARTING_CASH = 1000;
+  const STALE_AFTER_MIN = 90; // hourly cadence, so allow ~1.5 cycles of slack before flagging stale
+
+  const ICON_UP = '<svg viewBox="0 0 12 12" width="10" height="10"><path d="M6 2 L10 9 L2 9 Z" fill="currentColor"/></svg>';
+  const ICON_DOWN = '<svg viewBox="0 0 12 12" width="10" height="10"><path d="M6 10 L2 3 L10 3 Z" fill="currentColor"/></svg>';
+  const ICON_COIN = '<svg viewBox="0 0 24 24" width="14" height="14"><circle cx="12" cy="12" r="9" fill="none" stroke="currentColor" stroke-width="2"/><path d="M9.3 9.3c0-1.1 1.1-1.9 2.7-1.9s2.7.8 2.7 1.7c0 .9-.9 1.3-2.7 1.9-1.8.6-2.7 1-2.7 1.9 0 .9 1.1 1.7 2.7 1.7s2.7-.8 2.7-1.9" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg>';
+  const ICON_STOCK = '<svg viewBox="0 0 24 24" width="14" height="14"><rect x="4" y="12" width="3.4" height="8" fill="currentColor" rx="0.5"/><rect x="10.3" y="7" width="3.4" height="13" fill="currentColor" rx="0.5"/><rect x="16.6" y="3" width="3.4" height="17" fill="currentColor" rx="0.5"/></svg>';
+
+  const assetIconHtml = (cls) => `<span class="assetIcon ${cls}">${cls === "crypto" ? ICON_COIN : ICON_STOCK}</span>`;
+
+  const fmtUsd = (n, digits = 2) => {
+    if (n === null || n === undefined || Number.isNaN(n)) return "—";
+    const sign = n < 0 ? "-" : "";
+    const abs = Math.abs(n);
+    if (abs >= 1e9) return sign + "$" + (abs / 1e9).toFixed(2) + "B";
+    if (abs >= 1e6) return sign + "$" + (abs / 1e6).toFixed(2) + "M";
+    if (abs >= 1e3) return sign + "$" + (abs / 1e3).toFixed(2) + "K";
+    if (abs < 0.01 && abs !== 0) return sign + "$" + abs.toFixed(Math.min(8, digits + 4));
+    return sign + "$" + abs.toFixed(digits);
+  };
+  const fmtPct = (n) => {
+    if (n === null || n === undefined || Number.isNaN(n)) return "—";
+    return `${n > 0 ? "+" : ""}${n.toFixed(1)}%`;
+  };
+  const fmtQty = (q) => {
+    if (q === null || q === undefined || Number.isNaN(q)) return "—";
+    if (q >= 1000) return q.toFixed(2);
+    if (q >= 1) return q.toFixed(4);
+    return q.toFixed(6);
+  };
+  const escapeHtml = (str) => String(str ?? "").replace(/[&<>"']/g, (c) => ({
+    "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;",
+  }[c]));
+
+  function freshnessLabel(fetchedAt) {
+    if (!fetchedAt) return "awaiting first run";
+    const ms = Date.now() - new Date(fetchedAt).getTime();
+    if (ms < 0 || ms < 60000) return "updated just now";
+    const mins = Math.floor(ms / 60000);
+    if (mins < 60) return `updated ${mins}m ago`;
+    const hrs = Math.floor(mins / 60);
+    return `updated ${hrs}h ${mins % 60}m ago`;
+  }
+  function isStale(fetchedAt) {
+    if (!fetchedAt) return false;
+    return (Date.now() - new Date(fetchedAt).getTime()) / 60000 > STALE_AFTER_MIN;
+  }
+
+  let state = null;
+
+  const els = {};
+  ["statusText","liveDot","countdownText","scanCount","errBanner","heroValue","heroDelta",
+   "pillCash","pillPositions","pillWinRate","pillRealized","equitySvg","posGrid","positionsEmpty",
+   "tradeLog","tradeLogEmpty","tradeLogCount","cycleLogEl","cycleLogEmpty","cycleLogCount"]
+   .forEach((id) => { els[id] = document.getElementById(id); });
+
+  function computeEquity() {
+    let posValue = 0;
+    Object.values(state.positions).forEach((p) => { posValue += p.qty * (p.price || p.avgCost); });
+    return state.cash + posValue;
+  }
+
+  function equityCurveHtml() {
+    const points = state.equityHistory;
+    if (!points || points.length < 2) return "";
+    const values = points.map((p) => p.equity);
+    const min = Math.min(...values, state.startingCash);
+    const max = Math.max(...values, state.startingCash);
+    const range = max - min || 1;
+    const w = 600, h = 100, pad = 4;
+    const stepX = (w - pad * 2) / (points.length - 1);
+    const coords = points.map((p, i) => {
+      const x = pad + i * stepX;
+      const y = h - pad - ((p.equity - min) / range) * (h - pad * 2);
+      return `${x.toFixed(1)},${y.toFixed(1)}`;
+    });
+    const last = values[values.length - 1];
+    const color = last >= state.startingCash ? "#1F9254" : "#C13B2D";
+    const baseY = h - pad - ((state.startingCash - min) / range) * (h - pad * 2);
+    return `<line x1="${pad}" y1="${baseY.toFixed(1)}" x2="${w - pad}" y2="${baseY.toFixed(1)}" stroke="#DDDBD5" stroke-width="1" stroke-dasharray="3,3" />
+      <polyline points="${coords.join(" ")}" fill="none" stroke="${color}" stroke-width="2" />`;
+  }
+
+  function render() {
+    const stale = isStale(state.fetchedAt);
+    els.statusText.textContent = stale ? "STALE" : "LIVE";
+    els.statusText.className = stale ? "stale" : "";
+    els.liveDot.className = "liveDot" + (stale ? " stale" : "");
+    els.countdownText.textContent = freshnessLabel(state.fetchedAt);
+    els.scanCount.textContent = `${state.universeSize} assets tracked`;
+
+    const errList = (state.errors || []).slice();
+    if (stale) errList.push("No cycle has reported in a while — check the routine's run history.");
+    els.errBanner.innerHTML = errList.length
+      ? `<div class="errBanner">${escapeHtml(errList.join("  ·  "))}</div>` : "";
+
+    const equity = computeEquity();
+    const totalReturn = equity - state.startingCash;
+    const totalReturnPct = (totalReturn / state.startingCash) * 100;
+    els.heroValue.textContent = fmtUsd(equity);
+    els.heroDelta.className = "heroDelta " + (totalReturn >= 0 ? "pos" : "neg");
+    els.heroDelta.innerHTML = (totalReturn >= 0 ? ICON_UP : ICON_DOWN) + `<span>${fmtUsd(Math.abs(totalReturn))} (${fmtPct(totalReturnPct)})</span>`;
+
+    els.pillCash.textContent = fmtUsd(state.cash);
+    els.pillPositions.textContent = String(Object.keys(state.positions).length);
+    const realized = state.closedTrades.reduce((s, t) => s + t.pnl, 0);
+    els.pillRealized.textContent = fmtUsd(realized);
+    els.pillRealized.className = "pillValue " + (realized >= 0 ? "pos" : realized < 0 ? "neg" : "");
+    const wins = state.closedTrades.filter((t) => t.pnl > 0).length;
+    els.pillWinRate.textContent = state.closedTrades.length ? `${Math.round((wins / state.closedTrades.length) * 100)}%` : "—";
+
+    els.equitySvg.innerHTML = equityCurveHtml();
+
+    const posEntries = Object.entries(state.positions);
+    els.posGrid.innerHTML = posEntries.map(([id, p]) => {
+      const invested = p.qty * p.avgCost;
+      const value = p.qty * (p.price || p.avgCost);
+      const pnl = (p.price !== null && p.price !== undefined) ? (p.price - p.avgCost) * p.qty : null;
+      const pnlPct = (p.price !== null && p.price !== undefined) ? ((p.price - p.avgCost) / p.avgCost) * 100 : null;
+      const pnlClass = pnl !== null && pnl >= 0 ? "pos" : "neg";
+      const arrow = pnl !== null && pnl < 0 ? ICON_DOWN : ICON_UP;
+      return `<div class="posCard">
+        ${assetIconHtml(p.cls)}
+        <div class="posMain">
+          <div class="posSymbolRow">
+            <span class="posSymbol">${escapeHtml(p.symbol)}</span>
+            <span class="badge ${p.cls}">${p.cls === "crypto" ? "CRYPTO" : "STOCK"}</span>
+            ${p.stale ? '<span class="staleTag">STALE</span>' : ''}
+          </div>
+          <div class="posSub">Bot invested ${fmtUsd(invested)} → now worth ${fmtUsd(value)}</div>
+        </div>
+        <div class="posPnl">
+          <div class="pnlLine ${pnlClass}">${arrow}<span>${pnl !== null ? fmtUsd(pnl) : "—"}</span></div>
+          <div class="pnlSub">${pnl !== null ? fmtPct(pnlPct) : ""}</div>
+        </div>
+      </div>`;
+    }).join("");
+    els.positionsEmpty.style.display = posEntries.length === 0 ? "block" : "none";
+
+    const cycleLog = state.cycleLog || [];
+    els.cycleLogCount.textContent = cycleLog.length ? `${cycleLog.length} cycles logged` : "";
+    els.cycleLogEl.innerHTML = cycleLog.slice(0, 40).map((c) => {
+      const time = new Date(c.ts).toLocaleString([], { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" });
+      const events = (c.events || []).map((e) => `<div class="cycleEvent">${escapeHtml(e)}</div>`).join("");
+      const errs = (c.errors || []).length ? `<div class="cycleErr">${escapeHtml(c.errors.join(" · "))}</div>` : "";
+      return `<div class="cycleRow">
+        <div class="cycleHead"><span>${fmtUsd(c.equity)} equity · ${fmtUsd(c.cash)} cash</span><span class="cycleTime">${time}</span></div>
+        <div class="cycleNote">${escapeHtml(c.note || "")}</div>
+        ${events}
+        ${errs}
+      </div>`;
+    }).join("");
+    els.cycleLogEmpty.style.display = cycleLog.length === 0 ? "block" : "none";
+
+    els.tradeLogCount.textContent = state.tradeLog.length ? `${state.tradeLog.length} logged` : "";
+    els.tradeLog.innerHTML = state.tradeLog.slice(0, 30).map((t) => {
+      const time = new Date(t.ts).toLocaleString([], { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" });
+      const isBuy = t.action === "BUY";
+      const investedTxt = isBuy && t.value !== undefined ? `used ${fmtUsd(t.value)}` : "";
+      const pnlTxt = !isBuy && t.pnl !== undefined ? `${t.pnl >= 0 ? "profit" : "loss"} ${fmtUsd(t.pnl)} (${fmtPct(t.pnlPct)})` : "";
+      const detail = [fmtQty(t.qty) + " @ " + fmtUsd(t.price), investedTxt, pnlTxt].filter(Boolean).join(" · ");
+      return `<div class="logRow">
+        <span class="logIcon ${isBuy ? "buy" : "sell"}">${isBuy ? ICON_UP : ICON_DOWN}</span>
+        <div class="logMain"><span class="logSym">${isBuy ? "Bought" : "Sold"} ${escapeHtml(t.symbol)}</span><span class="logDetail">${detail}</span></div>
+        <span class="logTime">${time}</span>
+      </div>`;
+    }).join("");
+    els.tradeLogEmpty.style.display = state.tradeLog.length === 0 ? "block" : "none";
+  }
+
+  function freshState() {
+    return {
+      cash: STARTING_CASH, startingCash: STARTING_CASH, positions: {}, tradeLog: [], closedTrades: [],
+      equityHistory: [], cycleLog: [], universeSize: 0, errors: [], fetchedAt: null,
+    };
+  }
+
+  async function load() {
+    try {
+      const res = await fetch("./state.json?t=" + Date.now(), { cache: "no-store" });
+      const data = await res.json();
+      state = Object.assign(freshState(), data || {});
+      render();
+    } catch (e) {
+      if (!state) {
+        state = freshState();
+        els.errBanner.innerHTML = `<div class="errBanner">Could not load state.json: ${escapeHtml(String(e))}</div>`;
+        render();
+      }
+    }
+  }
+
+  load();
+  setInterval(load, 60000);
+})();
+</script>
+</body>
+</html>

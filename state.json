@@ -1,0 +1,1 @@
+{"cash":1000,"startingCash":1000,"positions":{},"tradeLog":[],"closedTrades":[],"equityHistory":[],"cycleLog":[],"params":{"buyThreshold":68,"sellThreshold":35,"riskPerTradePct":0.08,"stopLossPct":-8,"takeProfitPct":18,"momentumWeight":0.55},"universeSize":0,"errors":[],"fetchedAt":null}
